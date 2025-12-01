@@ -54,6 +54,13 @@ interface PestForm {
   count: string;
 }
 
+const base_color = "#032859";
+const primary_color = "#0d6efd";
+const text_color = "#000";
+const header_color = "#D94A3D";
+const success_color = "#198754"
+const caution_color = "#fd7e14";
+
 export default function DeviceDetailsScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -107,7 +114,7 @@ export default function DeviceDetailsScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [observations, setObservations] = useState<string>("");
 
-  const locked = isLocked == '1' || isLocked == 1;
+  const locked = isLocked == "1" || Number(isLocked) == 1;
 
   useEffect(() => {
     const loadServiceApplicationMethods = async () => {
@@ -115,7 +122,7 @@ export default function DeviceDetailsScreen() {
 
       try {
         const orders = (await loadFromJsonFile("orders")) || [];
-        const order = orders.find((o: Order) => o.id === Number(orderId));
+        const order = orders.find((o: Order) => o.id == Number(orderId));
         const services = order?.services || [];
         const currentService = services.find((s: Service) => s.id == Number(serviceId));
 
@@ -207,7 +214,7 @@ export default function DeviceDetailsScreen() {
   };
 
   function toggleCameraFacing() {
-    setFacing((current) => (current === "back" ? "front" : "back"));
+    setFacing((current) => (current == "back" ? "front" : "back"));
   }
 
   useEffect(() => {
@@ -278,21 +285,21 @@ export default function DeviceDetailsScreen() {
       try {
         const reports = (await loadFromJsonFile("reports")) || [];
         const existingReport = reports.find(
-          (r: Report) => r.order_id === Number(orderId)
+          (r: Report) => r.order_id == Number(orderId)
         );
 
         if (existingReport) {
           setCurrentReport(existingReport);
 
           const deviceReview = existingReport.reviews?.find(
-            (r: Review) => r.device_id === device.id
+            (r: Review) => r.device_id == device.id
           );
 
           if (deviceReview) {
             setAnswers((prevAnswers) =>
               prevAnswers.map((answer) => {
                 const existingAnswer = deviceReview.answers.find(
-                  (a: AnswerInterface) => a.question_id === answer.questionId
+                  (a: AnswerInterface) => a.question_id == answer.questionId
                 );
                 return existingAnswer
                   ? { ...answer, response: existingAnswer.response }
@@ -347,7 +354,7 @@ export default function DeviceDetailsScreen() {
           setReports(loadedReports);
 
           const report: Report = loadedReports.find(
-            (r: Report) => r.order_id === Number(orderId)
+            (r: Report) => r.order_id == Number(orderId)
           );
 
           const review: Review | undefined = currentReport?.reviews.find(
@@ -369,7 +376,7 @@ export default function DeviceDetailsScreen() {
       const loadedReports = (await loadFromJsonFile("reports")) || [];
       const loadedOrders: Order[] = (await loadFromJsonFile("orders")) || [];
       const reportIndex = loadedReports.findIndex(
-        (r: Report) => r.order_id === Number(orderId)
+        (r: Report) => r.order_id == Number(orderId)
       );
 
       const order = loadedOrders.find((o: Order) => o.id == Number(orderId));
@@ -380,14 +387,14 @@ export default function DeviceDetailsScreen() {
       const devicesToAutoReview =
         service?.devices
           .filter(
-            (d: Device) => d.control_point.id === device?.control_point.id
+            (d: Device) => d.control_point.id == device?.control_point.id
           )
           .map((d: Device) => d.id) || [];
 
       const currentDeviceReview =
         reportIndex >= 0
           ? loadedReports[reportIndex].reviews?.find(
-              (r: Review) => r.device_id === Number(deviceId)
+              (r: Review) => r.device_id == Number(deviceId)
             )
           : null;
 
@@ -422,7 +429,7 @@ export default function DeviceDetailsScreen() {
       }
 
       devicesToAutoReview.forEach((deviceId) => {
-        if (!updatedReviews.some((r) => r.device_id === deviceId)) {
+        if (!updatedReviews.some((r) => r.device_id == deviceId)) {
           updatedReviews.push({
             device_id: deviceId,
             is_checked: true,
@@ -461,7 +468,7 @@ export default function DeviceDetailsScreen() {
       setReports(updatedReports);
 
       const updatedCurrentReview = updatedReviews.find(
-        (r) => r.device_id === Number(deviceId)
+        (r) => r.device_id == Number(deviceId)
       );
       setCurrentReview(updatedCurrentReview || null);
 
@@ -483,7 +490,7 @@ export default function DeviceDetailsScreen() {
 
     setAnswers((prevAnswers) =>
       prevAnswers.map((answer) =>
-        answer.questionId === questionId ? { ...answer, response } : answer
+        answer.questionId == questionId ? { ...answer, response } : answer
       )
     );
   };
@@ -523,7 +530,7 @@ export default function DeviceDetailsScreen() {
   };
 
   const removeProduct = (index: number) => {
-    setProducts(products.filter((_, i) => i !== index));
+    setProducts(products.filter((_, i) => i != index));
   };
 
   const addPest = () => {
@@ -549,16 +556,16 @@ export default function DeviceDetailsScreen() {
   };
 
   const removePest = (index: number) => {
-    setPests(pests.filter((_, i) => i !== index));
+    setPests(pests.filter((_, i) => i != index));
   };
 
   const saveReport = async (report: Report): Promise<boolean> => {
     try {
       const reports = (await loadFromJsonFile("reports")) || [];
       const reportIndex = reports.findIndex(
-        (r: Report) => r.order_id === currentReport?.order_id
+        (r: Report) => r.order_id == currentReport?.order_id
       );
-      if (reportIndex !== -1) {
+      if (reportIndex != -1) {
         reports[reportIndex] = report;
       } else {
         reports.push(report);
@@ -607,7 +614,7 @@ export default function DeviceDetailsScreen() {
         signature_name: currentReport?.signature_name || null,
         reviews: currentReport?.reviews
           ? [
-              ...currentReport.reviews.filter((r) => r.device_id !== device.id),
+              ...currentReport.reviews.filter((r) => r.device_id != device.id),
               deviceReview,
             ]
           : [deviceReview],
@@ -767,8 +774,8 @@ export default function DeviceDetailsScreen() {
                         key={option}
                         style={[
                           styles.optionButton,
-                          answers.find((a) => a.questionId === question.id)
-                            ?.response === option
+                          answers.find((a) => a.questionId == question.id)
+                            ?.response == option
                             ? styles.selectedOption
                             : null,
                         ]}
@@ -777,8 +784,8 @@ export default function DeviceDetailsScreen() {
                         <ThemedText
                           style={[
                             styles.optionText,
-                            answers.find((a) => a.questionId === question.id)
-                              ?.response === option
+                            answers.find((a) => a.questionId == question.id)
+                              ?.response == option
                               ? styles.selectedOptionText
                               : null,
                           ]}
@@ -793,7 +800,7 @@ export default function DeviceDetailsScreen() {
                     style={styles.textInput}
                     placeholder="Escribe tu respuesta aquí..."
                     value={
-                      answers.find((a) => a.questionId === question.id)
+                      answers.find((a) => a.questionId == question.id)
                         ?.response || ""
                     }
                     onChangeText={(text) =>
@@ -819,7 +826,7 @@ export default function DeviceDetailsScreen() {
               </ThemedText>
             </View>
 
-            {availableProducts.length === 0 ? (
+            {availableProducts.length == 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="flask-outline" size={48} color="#C4C4C4" />
                 <ThemedText style={styles.emptyText}>
@@ -830,17 +837,17 @@ export default function DeviceDetailsScreen() {
               <>
                 {products.map((product, index) => {
                   const productInfo = availableProducts.find(
-                    (p) => p.id === product.product_id
+                    (p) => p.id == product.product_id
                   );
                   const lotInfo = productInfo?.lots?.find(
-                    (l) => l.id === product.lot_id
+                    (l) => l.id == product.lot_id
                   );
                   const methodInfo =
                     availableApplicationMethods.find(
-                      (m) => m.id === product.app_method_id
+                      (m) => m.id == product.app_method_id
                     ) ||
                     productInfo?.application_methods?.find(
-                      (m) => m.id === product.app_method_id
+                      (m) => m.id == product.app_method_id
                     );
 
                   return (
@@ -858,7 +865,7 @@ export default function DeviceDetailsScreen() {
                               <Ionicons
                                 name="barcode-outline"
                                 size={12}
-                                color="#3B82F6"
+                                color={base_color}
                               />
                               <ThemedText style={styles.detailText}>
                                 {lotInfo.registration_number}
@@ -870,14 +877,14 @@ export default function DeviceDetailsScreen() {
                               <Ionicons
                                 name="settings-outline"
                                 size={12}
-                                color="#3B82F6"
+                                color={base_color}
                               />
                               <ThemedText style={styles.detailText}>
                                 {methodInfo.name}
                               </ThemedText>
                             </View>
                           )}
-                          {!methodInfo && product.app_method_id === null && (
+                          {!methodInfo && product.app_method_id == null && (
                             <View style={styles.detailBadge}>
                               <Ionicons
                                 name="warning-outline"
@@ -914,7 +921,7 @@ export default function DeviceDetailsScreen() {
                     selectedValue={selectedProduct.product?.id || ""}
                     onValueChange={(itemValue) => {
                       const product = availableProducts.find(
-                        (p) => p.id === itemValue
+                        (p) => p.id == itemValue
                       );
                       if (product) handleProductSelect(product);
                     }}
@@ -936,7 +943,7 @@ export default function DeviceDetailsScreen() {
                         selectedValue={selectedProduct.selectedLot?.id || ""}
                         onValueChange={(itemValue) => {
                           const lot = selectedProduct.product?.lots.find(
-                            (l) => l.id === itemValue
+                            (l) => l.id == itemValue
                           );
                           setSelectedProduct({
                             ...selectedProduct,
@@ -964,7 +971,7 @@ export default function DeviceDetailsScreen() {
                           onValueChange={(itemValue) => {
                             const method =
                               selectedProduct.product?.application_methods?.find(
-                                (m) => m.id === itemValue
+                                (m) => m.id == itemValue
                               );
                             setSelectedProduct({
                               ...selectedProduct,
@@ -1050,7 +1057,7 @@ export default function DeviceDetailsScreen() {
               </ThemedText>
             </View>
 
-            {pests.length === 0 ? (
+            {pests.length == 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="bug-outline" size={48} color="#C4C4C4" />
                 <ThemedText style={styles.emptyText}>
@@ -1060,7 +1067,7 @@ export default function DeviceDetailsScreen() {
             ) : (
               pests.map((pest, index) => {
                 const pestInfo = availablePests.find(
-                  (p) => p.id === pest.pest_id
+                  (p) => p.id == pest.pest_id
                 );
                 return (
                   <View key={index} style={styles.pestItem}>
@@ -1362,6 +1369,7 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     flexDirection: "row",
+    alignItems: 'baseline',
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
@@ -1371,7 +1379,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#3B82F6",
+    backgroundColor: base_color,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -1379,7 +1387,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#1F2937",
+    color: header_color,
   },
   infoGrid: {
     gap: 12,
@@ -1423,8 +1431,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#F9FAFB",
   },
   selectedOption: {
-    backgroundColor: "#3B82F6",
-    borderColor: "#3B82F6",
+    backgroundColor: base_color,
+    borderColor: base_color,
   },
   optionText: {
     fontSize: 14,
@@ -1470,7 +1478,7 @@ const styles = StyleSheet.create({
   quantityText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#3B82F6",
+    color: base_color,
     backgroundColor: "#EFF6FF",
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -1557,7 +1565,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#3B82F6",
+    backgroundColor: base_color,
     padding: 8,
     borderRadius: 8,
     marginTop: 8,
@@ -1597,7 +1605,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   retakeButton: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: base_color,
   },
   deleteImageButton: {
     backgroundColor: "#EF4444",
@@ -1614,7 +1622,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#8B5CF6",
+    backgroundColor: caution_color,
     padding: 8,
     borderRadius: 8,
     gap: 8,
@@ -1628,7 +1636,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#10B981",
+    backgroundColor: primary_color,
     padding: 8,
     borderRadius: 8,
     gap: 8,
@@ -1642,7 +1650,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#3B82F6",
+    backgroundColor: primary_color,
     padding: 8,
     borderRadius: 8,
     gap: 8,
@@ -1683,7 +1691,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   permissionButton: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: base_color,
     padding: 16,
     borderRadius: 8,
   },

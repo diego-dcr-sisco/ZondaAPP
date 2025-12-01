@@ -49,6 +49,11 @@ type ActiveOrder = {
 const { width, height } = Dimensions.get("window");
 const SCAN_FRAME_SIZE = width * 0.7;
 
+const base_color = "#032859";
+const primary_color = "#0d6efd";
+const text_color = "#000";
+const header_color = "#D94A3D";
+
 export default function OrderDetailsScreen() {
   const colorScheme = useColorScheme();
   const router = useRouter();
@@ -181,7 +186,7 @@ export default function OrderDetailsScreen() {
         serviceId: serviceId.toString(),
         serviceName:
           order?.services.find((s) => s.id === serviceId)?.name || "Servicio",
-        isLocked: '1',
+        isLocked: Number(isReportLocked),
       },
     });
   };
@@ -1029,7 +1034,7 @@ export default function OrderDetailsScreen() {
                     <Ionicons
                       name="location-outline"
                       size={20}
-                      color="#A3044C"
+                      color="#02265A"
                     />
                   </View>
                   <View style={styles.infoContent}>
@@ -1050,7 +1055,7 @@ export default function OrderDetailsScreen() {
                     <Ionicons
                       name="calendar-outline"
                       size={20}
-                      color="#A3044C"
+                      color="#02265A"
                     />
                   </View>
                   <View style={styles.infoContent}>
@@ -1079,7 +1084,7 @@ export default function OrderDetailsScreen() {
                     <Ionicons
                       name="pricetag-outline"
                       size={20}
-                      color="#A3044C"
+                      color="#02265A"
                     />
                   </View>
                   <View style={styles.infoContent}>
@@ -1193,7 +1198,7 @@ export default function OrderDetailsScreen() {
                           <Ionicons
                             name="copy-outline"
                             size={16}
-                            color="#4a90e2"
+                            color="#012640"
                           />
                         </TouchableOpacity>
                       </View>
@@ -1233,7 +1238,7 @@ export default function OrderDetailsScreen() {
                   </CameraView>
 
                   <View style={styles.scannerInstructions}>
-                    <Ionicons name="scan-outline" size={18} color="#4a90e2" />
+                    <Ionicons name="scan-outline" size={18} color="#012640" />
                     <ThemedText style={styles.scannerInstructionsText}>
                       Encuadra el código QR dentro del marco
                     </ThemedText>
@@ -1344,7 +1349,7 @@ export default function OrderDetailsScreen() {
                   <Ionicons
                     name="add-circle-outline"
                     size={20}
-                    color="#A3044C"
+                    color="#02265A"
                     style={styles.addNotesIcon}
                   />
                 )}
@@ -1447,7 +1452,7 @@ export default function OrderDetailsScreen() {
                 activeOpacity={0.7}
               >
                 <View style={styles.signatureButtonIcon}>
-                  <Ionicons name="create-outline" size={28} color="#A3044C" />
+                  <Ionicons name="create-outline" size={28} color="#02265A" />
                 </View>
                 <ThemedText style={styles.signatureButtonText}>
                   Solicitar Firma del Cliente
@@ -1682,7 +1687,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#A3044C",
+    backgroundColor: primary_color,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
@@ -1708,13 +1713,14 @@ const styles = StyleSheet.create({
   qrContent: {
     marginTop: 8,
   },
+
   qrButton: {
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#F0F7FF",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#4a90e2",
+    borderColor: "#012640",
     borderStyle: "dashed",
     padding: 24,
     marginBottom: 16,
@@ -1723,7 +1729,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "#4a90e2",
+    backgroundColor: "#012640",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
@@ -1731,7 +1737,7 @@ const styles = StyleSheet.create({
   qrButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1F2937",
+    color: text_color,
     textAlign: "center",
     marginBottom: 4,
   },
@@ -1764,7 +1770,7 @@ const styles = StyleSheet.create({
   },
   scannedDataText: {
     fontSize: 14,
-    color: "#1F2937",
+    color: text_color,
     flex: 1,
     marginRight: 8,
     fontFamily: "monospace",
@@ -1811,7 +1817,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 25,
     height: 25,
-    borderColor: "#4a90e2",
+    borderColor: "#012640",
   },
   topLeft: {
     top: 0,
@@ -1918,7 +1924,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#FDE8EF",
+    backgroundColor: "#E9F2FB",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
@@ -1926,7 +1932,7 @@ const styles = StyleSheet.create({
   signatureButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1F2937",
+    color: text_color,
     textAlign: "center",
     marginBottom: 4,
   },
@@ -1941,7 +1947,7 @@ const styles = StyleSheet.create({
   editButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#0d6efd",
+    backgroundColor: primary_color,
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 8,
@@ -1971,7 +1977,7 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
   saveButton: {
-    backgroundColor: "#0d6efd",
+    backgroundColor: primary_color,
   },
   saveButtonText: {
     fontSize: 14,
@@ -2010,7 +2016,7 @@ const styles = StyleSheet.create({
   notesText: {
     fontSize: 15,
     lineHeight: 22,
-    color: "#1F2937",
+    color: text_color,
     flex: 1,
   },
   emptyNotesText: {
@@ -2033,7 +2039,7 @@ const styles = StyleSheet.create({
   clientName: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#1F2937",
+    color: text_color,
   },
   infoBoxNoShadow: {
     backgroundColor: "#FFFFFF",
@@ -2050,7 +2056,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#FDE8EF",
+    backgroundColor: "#E9F2FB",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -2066,7 +2072,7 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 15,
     fontWeight: "500",
-    color: "#1F2937",
+    color: text_color,
   },
   infoAction: {
     paddingLeft: 8,
@@ -2138,7 +2144,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 20,
-    backgroundColor: "#A3044C",
+    backgroundColor: "#02265A",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -2146,7 +2152,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#1F2937",
+    color: header_color,
     flex: 1,
   },
   counterBadge: {
@@ -2184,7 +2190,7 @@ const styles = StyleSheet.create({
   },
   serviceContent: {
     flex: 1,
-    backgroundColor: "#FDE8EF",
+    backgroundColor: "#E9F2FB",
     borderRadius: 12,
     padding: 12,
     zIndex: 2,
@@ -2198,7 +2204,7 @@ const styles = StyleSheet.create({
   serviceName: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#1F2937",
+    color: text_color,
     flex: 1,
     marginRight: 12,
   },

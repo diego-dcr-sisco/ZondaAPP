@@ -16,7 +16,8 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.siscoplagas.siscoapp"
     },
     "android": {
       "adaptiveIcon": {
@@ -45,7 +46,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "eea1364c-a8d0-46f0-90f5-eae473f4197a"
+        "projectId": "ba187b0d-7e4c-45ec-89ab-9beeef2c210a"
       }
     }
   }

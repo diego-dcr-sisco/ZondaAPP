@@ -36,6 +36,12 @@ interface SelectedProduct {
   amount: string;
 }
 
+const base_color = "#032859";
+const primary_color = "#0d6efd";
+const text_color = "#000";
+const header_color = "#D94A3D";
+const success_color = "#198754"
+
 export default function ServiceDetailsScreen() {
   const colorScheme = useColorScheme();
   const router = useRouter();
@@ -46,7 +52,8 @@ export default function ServiceDetailsScreen() {
     isLocked: string;
   }>();
 
-  const locked = isLocked == '1' || isLocked == 1;
+  const locked = isLocked == "1" || Number(isLocked) == 1;
+
   const [service, setService] = useState<Service>();
   const [devices, setDevices] = useState<Device[]>([]);
   const [currentReport, setCurrentReport] = useState<Report | null>(null);
@@ -58,7 +65,9 @@ export default function ServiceDetailsScreen() {
     );
   };
 
-  const [availableAppMethods, setAvailableAppMethods] = useState<ApplicationMethod[]>([]);
+  const [availableAppMethods, setAvailableAppMethods] = useState<
+    ApplicationMethod[]
+  >([]);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<SelectedProduct>({
     product: null,
@@ -116,7 +125,7 @@ export default function ServiceDetailsScreen() {
 
   const { logout, user } = useAuth();
 
-  useEffect(() => {                  
+  useEffect(() => {
     const fetchOrderDetails = async () => {
       try {
         const orders: Order[] = await loadFromJsonFile("orders");
@@ -193,7 +202,7 @@ export default function ServiceDetailsScreen() {
         deviceData: JSON.stringify(device),
         productsData: JSON.stringify(service?.products),
         pestsData: JSON.stringify(service?.pests),
-        isLocked: locked ? '1' : '0'
+        isLocked: locked ? "1" : "0",
       },
     });
   };
@@ -523,7 +532,7 @@ export default function ServiceDetailsScreen() {
                           <Ionicons
                             name="barcode-outline"
                             size={12}
-                            color="#3B82F6"
+                            color={base_color}
                           />
                           <ThemedText style={styles.detailText}>
                             {
@@ -540,7 +549,7 @@ export default function ServiceDetailsScreen() {
                           <Ionicons
                             name="settings-outline"
                             size={12}
-                            color="#3B82F6"
+                            color={base_color}
                           />
                           <ThemedText style={styles.detailText}>
                             {
@@ -681,17 +690,21 @@ export default function ServiceDetailsScreen() {
               <TouchableOpacity
                 style={[
                   styles.addButton,
-                  (!selectedProduct.product || !selectedProduct.amount || locked) && styles.addButtonDisabled,
+                  (!selectedProduct.product ||
+                    !selectedProduct.amount ||
+                    locked) &&
+                    styles.addButtonDisabled,
                 ]}
                 onPress={addProduct}
-                disabled={!selectedProduct.product || !selectedProduct.amount || locked}
+                disabled={
+                  !selectedProduct.product || !selectedProduct.amount || locked
+                }
               >
                 <Ionicons name="add" size={20} color="#FFFFFF" />
                 <ThemedText style={styles.addButtonText}>
                   Agregar Producto
                 </ThemedText>
               </TouchableOpacity>
-
             </View>
           </Card.Content>
         </Card>
@@ -783,7 +796,8 @@ export default function ServiceDetailsScreen() {
               <TouchableOpacity
                 style={[
                   styles.addButton,
-                  (!selectedPest || !pestCount || locked) && styles.addButtonDisabled,
+                  (!selectedPest || !pestCount || locked) &&
+                    styles.addButtonDisabled,
                 ]}
                 onPress={addPest}
                 disabled={!selectedPest || !pestCount || locked}
@@ -798,7 +812,7 @@ export default function ServiceDetailsScreen() {
         </Card>
 
         {/* Botón de Finalizar */}
-        {!currentReport?.is && (
+        {!currentReport?.is_finalized && (
           <View style={styles.footer}>
             <TouchableOpacity
               style={[styles.finishButton]}
@@ -880,7 +894,7 @@ export const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#3B82F6",
+    backgroundColor: base_color,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -888,7 +902,7 @@ export const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#1F2937",
+    color: header_color,
   },
 
   // Content Styles
@@ -920,7 +934,7 @@ export const styles = StyleSheet.create({
   deviceCode: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#3B82F6",
+    color: base_color,
     backgroundColor: "#EFF6FF",
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -941,7 +955,7 @@ export const styles = StyleSheet.create({
   reviewedBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#10B981",
+    backgroundColor: success_color,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -981,7 +995,7 @@ export const styles = StyleSheet.create({
   quantityText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#3B82F6",
+    color: base_color,
     backgroundColor: "#EFF6FF",
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -1011,7 +1025,7 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
     borderLeftWidth: 4,
-    borderLeftColor: "#10B981",
+    borderLeftColor: success_color,
   },
   pestInfo: {
     flex: 1,
@@ -1077,7 +1091,7 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#3B82F6",
+    backgroundColor: primary_color,
     padding: 8,
     borderRadius: 8,
     marginTop: 8,
@@ -1099,14 +1113,14 @@ export const styles = StyleSheet.create({
 
   // Footer Styles
   footer: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   finishButton: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#10B981",
+    backgroundColor: "#198754",
     padding: 8,
     borderRadius: 8,
   },

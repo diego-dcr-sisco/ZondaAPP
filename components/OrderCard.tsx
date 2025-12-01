@@ -44,6 +44,14 @@ const statusIcons: Record<number, keyof typeof Ionicons.glyphMap> = {
   2: "checkmark-done-outline",
 };
 
+// En un archivo de utils (ej: formatUtils.js)
+const formatPrice = (price: any) => {
+  if (price == null || isNaN(Number(price))) {
+    return "--";
+  }
+  return `$${Number(price).toFixed(2)}`;
+};
+
 export const OrderCard: React.FC<OrderCardProps> = ({ order, isOnline }) => {
   const colorScheme = useColorScheme() ?? "light";
   const secondaryTextColor = colorScheme === "dark" ? "#94A3B8" : "#263238";
@@ -298,7 +306,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, isOnline }) => {
             <View style={styles.priceContainer}>
               <ThemedText style={styles.totalLabel}>Total:</ThemedText>
               <ThemedText style={styles.totalAmount}>
-                {order.price > -1 ? `$${order.price.toFixed(2)}` : "--"}
+                {formatPrice(order?.price)}
               </ThemedText>
             </View>
 

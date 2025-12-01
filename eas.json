@@ -26,6 +26,13 @@
         "buildType": "app-bundle",
         "gradleCommand": ":app:bundleRelease"
       }
+    },
+    "production-apk": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      }
     }
   },
   "submit": {
