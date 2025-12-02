@@ -1,4 +1,4 @@
-import React, { use, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   Alert,
   Image,
@@ -58,7 +58,7 @@ const base_color = "#032859";
 const primary_color = "#0d6efd";
 const text_color = "#000";
 const header_color = "#D94A3D";
-const success_color = "#198754"
+const success_color = "#198754";
 const caution_color = "#fd7e14";
 
 export default function DeviceDetailsScreen() {
@@ -110,6 +110,7 @@ export default function DeviceDetailsScreen() {
   const [facing, setFacing] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraVisible, setCameraVisible] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   const [imgBase64, setImgBase64] = useState<string | null>(null);
   const cameraRef = useRef<CameraView>(null);
   const [observations, setObservations] = useState<string>("");
@@ -124,7 +125,9 @@ export default function DeviceDetailsScreen() {
         const orders = (await loadFromJsonFile("orders")) || [];
         const order = orders.find((o: Order) => o.id == Number(orderId));
         const services = order?.services || [];
-        const currentService = services.find((s: Service) => s.id == Number(serviceId));
+        const currentService = services.find(
+          (s: Service) => s.id == Number(serviceId)
+        );
 
         if (currentService && currentService.application_methods) {
           setAvailableApplicationMethods(currentService.application_methods);
@@ -147,12 +150,10 @@ export default function DeviceDetailsScreen() {
     if (product.application_methods && product.application_methods.length > 0) {
       applicationMethods = product.application_methods;
       console.log("Usando métodos del producto:", applicationMethods);
-    }
-    else if (availableApplicationMethods.length > 0) {
+    } else if (availableApplicationMethods.length > 0) {
       applicationMethods = availableApplicationMethods;
       console.log("Usando métodos del servicio:", applicationMethods);
-    }
-    else {
+    } else {
       console.log("No hay métodos de aplicación disponibles");
       Alert.alert(
         "Información",
@@ -386,9 +387,7 @@ export default function DeviceDetailsScreen() {
 
       const devicesToAutoReview =
         service?.devices
-          .filter(
-            (d: Device) => d.control_point.id == device?.control_point.id
-          )
+          .filter((d: Device) => d.control_point.id == device?.control_point.id)
           .map((d: Device) => d.id) || [];
 
       const currentDeviceReview =
@@ -483,8 +482,8 @@ export default function DeviceDetailsScreen() {
   };
 
   const handleSelectAnswer = (questionId: number, response: string) => {
-    if(locked) {
-      console.log('No se peude');
+    if (locked) {
+      console.log("No se peude");
       return;
     }
 
@@ -1026,12 +1025,16 @@ export default function DeviceDetailsScreen() {
                   <TouchableOpacity
                     style={[
                       styles.addButton,
-                      (!selectedProduct.product || !selectedProduct.amount || locked) &&
+                      (!selectedProduct.product ||
+                        !selectedProduct.amount ||
+                        locked) &&
                         styles.addButtonDisabled,
                     ]}
                     onPress={addProduct}
                     disabled={
-                      !selectedProduct.product || !selectedProduct.amount || locked
+                      !selectedProduct.product ||
+                      !selectedProduct.amount ||
+                      locked
                     }
                   >
                     <Ionicons name="add" size={20} color="#FFFFFF" />
@@ -1268,37 +1271,41 @@ export default function DeviceDetailsScreen() {
         )}
 
         {/* Modal de Cámara */}
-        <Modal
-          animationType="slide"
-          transparent={false}
-          visible={cameraVisible}
-          onRequestClose={() => setCameraVisible(false)}
-        >
-          <View style={styles.cameraContainer}>
-            <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
-              <View style={styles.cameraButtons}>
-                <TouchableOpacity
-                  style={styles.captureButton}
-                  onPress={takePicture}
-                >
-                  <Ionicons name="camera" size={30} color="#FFFFFF" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.flipButton}
-                  onPress={toggleCameraFacing}
-                >
-                  <Ionicons name="camera-reverse" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.closeCameraButton}
-                  onPress={() => setCameraVisible(false)}
-                >
-                  <Ionicons name="close" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-            </CameraView>
-          </View>
-        </Modal>
+        {cameraVisible && permission?.granted && (
+          <Modal
+            animationType="slide"
+            transparent={false}
+            visible={cameraVisible}
+            onRequestClose={() => setCameraVisible(false)}
+          >
+            <View style={styles.cameraContainer}>
+              <CameraView style={styles.camera} facing={facing} ref={cameraRef} onCameraReady={() => setCameraReady(true)}>
+                {cameraReady && (
+                <View style={styles.cameraButtons}>
+                  <TouchableOpacity
+                    style={styles.captureButton}
+                    onPress={takePicture}
+                  >
+                    <Ionicons name="camera" size={30} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.flipButton}
+                    onPress={toggleCameraFacing}
+                  >
+                    <Ionicons name="camera-reverse" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.closeCameraButton}
+                    onPress={() => setCameraVisible(false)}
+                  >
+                    <Ionicons name="close" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+                )}
+              </CameraView>
+            </View>
+          </Modal>
+        )}
       </ScrollView>
     </ThemedView>
   );
@@ -1369,7 +1376,7 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     flexDirection: "row",
-    alignItems: 'baseline',
+    alignItems: "baseline",
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
@@ -1565,11 +1572,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: base_color,
+    backgroundColor: primary_color,
     padding: 8,
     borderRadius: 8,
     marginTop: 8,
   },
+  
   addButtonDisabled: {
     backgroundColor: "#9CA3AF",
   },
@@ -1650,7 +1658,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: primary_color,
+    backgroundColor: success_color,
     padding: 8,
     borderRadius: 8,
     gap: 8,

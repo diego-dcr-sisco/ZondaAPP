@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Guardar el token para futuras peticiones
       axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
       
-      // Guardar datos del usuario
+      // Guardar datos del usuarioNo se pudo conectar
       await AsyncStorage.setItem('userData', JSON.stringify(userData));
       
       setUser(userData);

@@ -17,7 +17,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.siscoplagas.siscoapp"
+      "bundleIdentifier": "com.zonda.zondaapp"
     },
     "android": {
       "adaptiveIcon": {
@@ -28,7 +28,7 @@
       "permissions": [
         "android.permission.CAMERA"
       ],
-      "package": "com.siscoplagas.siscoapp"
+      "package": "com.zonda.zondaapp"
     },
     "web": {
       "bundler": "metro",
