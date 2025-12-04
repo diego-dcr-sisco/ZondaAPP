@@ -1,8 +1,6 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
-  Image,
-  Modal,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -34,8 +32,6 @@ import { Product } from "../types/product";
 import { Service } from "../types/service";
 import { ApplicationMethod } from "../types/application-method";
 import { Lot } from "../types/lot";
-import { CameraType, CameraView, useCameraPermissions } from "expo-camera";
-import * as ImageManipulator from "expo-image-manipulator";
 
 interface AnswerState {
   questionId: number;
@@ -106,13 +102,6 @@ export default function DeviceDetailsScreen() {
   const [currentReport, setCurrentReport] = useState<Report | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [currentReview, setCurrentReview] = useState<Review | null>(null);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [facing, setFacing] = useState<CameraType>("back");
-  const [permission, requestPermission] = useCameraPermissions();
-  const [cameraVisible, setCameraVisible] = useState(false);
-  const [cameraReady, setCameraReady] = useState(false);
-  const [imgBase64, setImgBase64] = useState<string | null>(null);
-  const cameraRef = useRef<CameraView>(null);
   const [observations, setObservations] = useState<string>("");
 
   const locked = isLocked == "1" || Number(isLocked) == 1;
@@ -141,20 +130,13 @@ export default function DeviceDetailsScreen() {
   }, [serviceId]);
 
   const handleProductSelect = (product: Product) => {
-    // console.log("Producto seleccionado:", product);
-    // console.log("Métodos del producto:", product.application_methods);
-    // console.log("Métodos del servicio:", availableApplicationMethods);
-
     let applicationMethods: ApplicationMethod[] = [];
 
     if (product.application_methods && product.application_methods.length > 0) {
       applicationMethods = product.application_methods;
-      console.log("Usando métodos del producto:", applicationMethods);
     } else if (availableApplicationMethods.length > 0) {
       applicationMethods = availableApplicationMethods;
-      console.log("Usando métodos del servicio:", applicationMethods);
     } else {
-      console.log("No hay métodos de aplicación disponibles");
       Alert.alert(
         "Información",
         "Este producto no tiene métodos de aplicación configurados"
@@ -172,59 +154,11 @@ export default function DeviceDetailsScreen() {
     });
   };
 
-  const takePicture = async () => {
-    if (cameraRef.current) {
-      try {
-        const photo = await cameraRef.current.takePictureAsync({
-          quality: 0.7,
-          base64: true,
-        });
-
-        if (photo.uri) {
-          setCapturedImage(photo.uri);
-
-          const manipResult = await ImageManipulator.manipulateAsync(
-            photo.uri,
-            [
-              {
-                resize: {
-                  width: 800,
-                },
-              },
-            ],
-            {
-              compress: 0.7,
-              format: ImageManipulator.SaveFormat.PNG,
-              base64: true,
-            }
-          );
-
-          if (manipResult.base64) {
-            const base64WithPrefix = `data:image/png;base64,${manipResult.base64}`;
-            setImgBase64(base64WithPrefix);
-          }
-
-          setCameraVisible(false);
-          Alert.alert("Éxito", "Imagen guardada correctamente");
-        }
-      } catch (error) {
-        console.error("Error al tomar la foto:", error);
-        Alert.alert("Error", "No se pudo tomar la foto");
-      }
-    }
-  };
-
-  function toggleCameraFacing() {
-    setFacing((current) => (current == "back" ? "front" : "back"));
-  }
-
   useEffect(() => {
     const resetDeviceState = () => {
       setAnswers([]);
       setProducts([]);
       setPests([]);
-      setCapturedImage(null);
-      setImgBase64(null);
       setObservations("");
       setSelectedProduct({
         product: null,
@@ -316,26 +250,17 @@ export default function DeviceDetailsScreen() {
               setPests(deviceReview.pests);
             }
 
-            if (deviceReview.image) {
-              setCapturedImage(deviceReview.image);
-              setImgBase64(deviceReview.image);
-            }
-
             if (deviceReview.observations) {
               setObservations(deviceReview.observations);
             }
           } else {
             setProducts([]);
             setPests([]);
-            setCapturedImage(null);
-            setImgBase64(null);
             setObservations("");
           }
         } else {
           setProducts([]);
           setPests([]);
-          setCapturedImage(null);
-          setImgBase64(null);
           setObservations("");
         }
       } catch (error) {
@@ -483,7 +408,6 @@ export default function DeviceDetailsScreen() {
 
   const handleSelectAnswer = (questionId: number, response: string) => {
     if (locked) {
-      console.log("No se peude");
       return;
     }
 
@@ -596,7 +520,7 @@ export default function DeviceDetailsScreen() {
         })),
         products: products,
         pests: pests,
-        image: imgBase64,
+        image: null,
         is_checked: true,
         is_scanned: false,
         observations: observations,
@@ -641,32 +565,6 @@ export default function DeviceDetailsScreen() {
       setIsSubmitting(false);
     }
   };
-
-  const isFinalizedOrder = () => {
-    return currentReport?.is_finalized ?? false;
-  };
-
-  if (!permission) {
-    return <View />;
-  }
-
-  if (!permission.granted) {
-    return (
-      <View style={styles.permissionContainer}>
-        <ThemedText style={styles.message}>
-          Necesitamos tu permiso para usar la cámara
-        </ThemedText>
-        <TouchableOpacity
-          style={styles.permissionButton}
-          onPress={requestPermission}
-        >
-          <ThemedText style={styles.permissionButtonText}>
-            Conceder permiso
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
-    );
-  }
 
   if (!device) {
     return (
@@ -1177,69 +1075,9 @@ export default function DeviceDetailsScreen() {
           </Card.Content>
         </Card>
 
-        {/* Imagen Capturada */}
-        {capturedImage && (
-          <Card style={styles.card}>
-            <Card.Content>
-              <View style={styles.sectionHeader}>
-                <View style={styles.headerIconContainer}>
-                  <Ionicons name="image-outline" size={20} color="#FFFFFF" />
-                </View>
-                <ThemedText style={styles.sectionTitle}>
-                  Imagen del Dispositivo
-                </ThemedText>
-              </View>
-
-              <Image
-                source={{ uri: capturedImage }}
-                style={styles.capturedImage}
-              />
-
-              <View style={styles.imageActions}>
-                <TouchableOpacity
-                  style={[styles.imageButton, styles.retakeButton]}
-                  onPress={() => setCameraVisible(true)}
-                >
-                  <Ionicons name="camera-reverse" size={16} color="#FFFFFF" />
-                  <ThemedText style={styles.imageButtonText}>
-                    Volver a tomar
-                  </ThemedText>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.imageButton, styles.deleteImageButton]}
-                  onPress={() => {
-                    setCapturedImage(null);
-                    if (currentReview) {
-                      setCurrentReview({ ...currentReview, image: null });
-                    }
-                  }}
-                >
-                  <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
-                  <ThemedText style={styles.imageButtonText}>
-                    Eliminar
-                  </ThemedText>
-                </TouchableOpacity>
-              </View>
-            </Card.Content>
-          </Card>
-        )}
-
         {/* Botones de Acción */}
         {!currentReport?.is_finalized && (
           <View style={styles.actionsContainer}>
-            {!capturedImage && (
-              <TouchableOpacity
-                style={styles.cameraButton}
-                onPress={() => setCameraVisible(true)}
-              >
-                <Ionicons name="camera-outline" size={20} color="#FFFFFF" />
-                <ThemedText style={styles.cameraButtonText}>
-                  Tomar Foto
-                </ThemedText>
-              </TouchableOpacity>
-            )}
-
             <TouchableOpacity
               style={[
                 styles.submitButton,
@@ -1268,43 +1106,6 @@ export default function DeviceDetailsScreen() {
               </ThemedText>
             </TouchableOpacity>
           </View>
-        )}
-
-        {/* Modal de Cámara */}
-        {cameraVisible && permission?.granted && (
-          <Modal
-            animationType="slide"
-            transparent={false}
-            visible={cameraVisible}
-            onRequestClose={() => setCameraVisible(false)}
-          >
-            <View style={styles.cameraContainer}>
-              <CameraView style={styles.camera} facing={facing} ref={cameraRef} onCameraReady={() => setCameraReady(true)}>
-                {cameraReady && (
-                <View style={styles.cameraButtons}>
-                  <TouchableOpacity
-                    style={styles.captureButton}
-                    onPress={takePicture}
-                  >
-                    <Ionicons name="camera" size={30} color="#FFFFFF" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.flipButton}
-                    onPress={toggleCameraFacing}
-                  >
-                    <Ionicons name="camera-reverse" size={24} color="#FFFFFF" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.closeCameraButton}
-                    onPress={() => setCameraVisible(false)}
-                  >
-                    <Ionicons name="close" size={24} color="#FFFFFF" />
-                  </TouchableOpacity>
-                </View>
-                )}
-              </CameraView>
-            </View>
-          </Modal>
         )}
       </ScrollView>
     </ThemedView>
@@ -1592,37 +1393,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#FEF2F2",
   },
-  capturedImage: {
-    width: "100%",
-    height: 300,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  imageActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  imageButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  retakeButton: {
-    backgroundColor: base_color,
-  },
-  deleteImageButton: {
-    backgroundColor: "#EF4444",
-  },
-  imageButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-    fontSize: 14,
-  },
   actionsContainer: {
     gap: 12,
   },
@@ -1636,20 +1406,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   autoReviewButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  cameraButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: primary_color,
-    padding: 8,
-    borderRadius: 8,
-    gap: 8,
-  },
-  cameraButtonText: {
     color: "#FFFFFF",
     fontWeight: "600",
     fontSize: 16,
@@ -1684,70 +1440,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "700",
     fontSize: 16,
-  },
-  permissionContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    padding: 20,
-  },
-  message: {
-    fontSize: 16,
-    color: "#374151",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  permissionButton: {
-    backgroundColor: base_color,
-    padding: 16,
-    borderRadius: 8,
-  },
-  permissionButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  cameraContainer: {
-    flex: 1,
-    backgroundColor: "#000000",
-  },
-  camera: {
-    flex: 1,
-  },
-  cameraButtons: {
-    position: "absolute",
-    bottom: 40,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  captureButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  flipButton: {
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  closeCameraButton: {
-    backgroundColor: "rgba(239, 68, 68, 0.7)",
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: "center",
-    alignItems: "center",
   },
   amountInputContainer: {
     flexDirection: "row",
