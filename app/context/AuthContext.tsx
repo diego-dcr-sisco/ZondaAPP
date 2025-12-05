@@ -51,8 +51,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      console.log("🔍 URL completa:", `${axiosInstance.defaults.baseURL}login`);
-      console.log("📤 Datos:", { email, password });
+      //console.log("🔍 URL completa:", `${axiosInstance.defaults.baseURL}login`);
+      //console.log("📤 Datos:", { email, password });
 
       const response = await axiosInstance.post("login", {
         email,

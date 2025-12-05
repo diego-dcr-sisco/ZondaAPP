@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: "http://siscoplagas.zondaerp.mx/api/",
+  baseURL: "https://siscoplagas.zondaerp.mx/api/",
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -13,8 +13,8 @@ const axiosInstance = axios.create({
 // Interceptor para debug
 axiosInstance.interceptors.request.use(
   (config) => {
-    console.log("📡 Enviando petición a:", config.url);
-    console.log("📦 Datos:", config.data);
+    //console.log("📡 Enviando petición a:", config.url);
+    //console.log("📦 Datos:", config.data);
     return config;
   },
   (error) => {
@@ -25,7 +25,7 @@ axiosInstance.interceptors.request.use(
 
 axiosInstance.interceptors.response.use(
   (response) => {
-    console.log("✅ Respuesta recibida:", response.status);
+    //console.log("✅ Respuesta recibida:", response.status);
     return response;
   },
   (error) => {

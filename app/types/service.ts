@@ -7,7 +7,7 @@ export interface Service {
   id: number;
   prefix: number;
   name: string;
-  description: string | null;
+  description?: string;
   pests: Pest[];
   products: Product[];
   application_methods: ApplicationMethod[];

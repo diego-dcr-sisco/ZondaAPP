@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Alert,
   Dimensions,
@@ -12,7 +12,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Animated,
 } from "react-native";
 import { Card } from "react-native-paper";
 import SignatureCanvas from "react-native-signature-canvas";
@@ -38,7 +37,6 @@ import {
 } from "expo-camera";
 import * as Clipboard from "expo-clipboard";
 import { Device } from "../types/device";
-import { useEffect } from "react";
 
 type ActiveOrder = {
   order_id: string | number;
@@ -46,7 +44,7 @@ type ActiveOrder = {
   time: string;
 };
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 const SCAN_FRAME_SIZE = width * 0.7;
 
 const base_color = "#032859";
@@ -73,6 +71,7 @@ export default function OrderDetailsScreen() {
   const [scannedData, setScannedData] = useState("");
   const [permission, requestPermission] = useCameraPermissions();
   const [signatureName, setSignatureName] = useState("");
+  const [completedServices, setCompletedServices] = useState<number[]>([]);
 
   const isReportLocked = currentReport?.is_finalized && currentReport?.is_synchronized;
 
@@ -97,6 +96,13 @@ export default function OrderDetailsScreen() {
           setCurrentReport(report);
           setNotes(report?.notes || "");
           setSignature(report?.customer_signature || null);
+          
+          // Cargar servicios completados desde el reporte
+          if (report?.services_completed) {
+            setCompletedServices(report.services_completed);
+          } else {
+            setCompletedServices([]);
+          }
         } catch (error) {
           console.error("Error fetching data:", error);
           Alert.alert("Error", "No se pudieron cargar los datos");
@@ -116,14 +122,89 @@ export default function OrderDetailsScreen() {
 
       unsubscribe();
       fetchData();
+      
+      // Limpiar al desmontar
+      return () => {
+        unsubscribe();
+      };
     }, [orderId, isOnline])
   );
 
-  const isServiceComplete = (service: Service) => {
-    const serviceReport = reports.find((r) => r.order_id === Number(orderId));
-    if (serviceReport) {
-      return true;
+  // Actualizar completedServices cuando currentReport cambie
+  useEffect(() => {
+    if (currentReport?.services_completed) {
+      setCompletedServices(currentReport.services_completed);
     } else {
+      setCompletedServices([]);
+    }
+  }, [currentReport]);
+
+  // Función para verificar si un servicio está completado
+  const isServiceComplete = (serviceId: number): boolean => {
+    return completedServices.includes(serviceId);
+  };
+
+  // Función para actualizar el estado de un servicio
+  const updateServiceCompletion = async (serviceId: number, isComplete: boolean) => {
+    try {
+      const allReports: Report[] = (await loadFromJsonFile("reports")) || [];
+      const reportIndex = allReports.findIndex(
+        (r) => r.order_id == Number(orderId)
+      );
+
+      let updatedCompletedServices: number[];
+
+      if (isComplete) {
+        // Agregar servicio si no existe
+        if (!completedServices.includes(serviceId)) {
+          updatedCompletedServices = [...completedServices, serviceId];
+        } else {
+          updatedCompletedServices = completedServices; // Ya existe
+        }
+      } else {
+        // Remover servicio
+        updatedCompletedServices = completedServices.filter(id => id != serviceId);
+      }
+
+      setCompletedServices(updatedCompletedServices);
+
+      if (reportIndex != -1) {
+        allReports[reportIndex] = {
+          ...allReports[reportIndex],
+          services_completed: updatedCompletedServices,
+          is_synchronized: false,
+        };
+        setCurrentReport(allReports[reportIndex]);
+      } else {
+        const newReport: Report = {
+          order_id: Number(orderId),
+          user_id: userId ?? null,
+          start_time: new Date().toLocaleTimeString("es-MX", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          }),
+          end_time: null,
+          completed_date: new Date().toISOString(),
+          notes: notes || null,
+          customer_signature: signature || null,
+          signature_name: signatureName,
+          reviews: [],
+          products: [],
+          pests: [],
+          services_completed: updatedCompletedServices,
+          is_finalized: false,
+          is_synchronized: false,
+          status_id: order?.status_id ?? 1,
+        };
+        allReports.push(newReport);
+        setCurrentReport(newReport);
+      }
+
+      await saveToJsonFile("reports", allReports);
+      return true;
+    } catch (error) {
+      console.error("Error updating service completion:", error);
       return false;
     }
   };
@@ -145,7 +226,7 @@ export default function OrderDetailsScreen() {
     }
 
     const { status } = await requestPermission();
-    if (status === "granted") {
+    if (status == "granted") {
       setScannedData("");
       setShowQRScanner(true);
     } else {
@@ -172,20 +253,13 @@ export default function OrderDetailsScreen() {
   };
 
   const handleServicePress = (serviceId: number) => {
-    /*if (isReportLocked) {
-      Alert.alert(
-        "Reporte Inactivo",
-        "No se pueden modificar servicios en un reporte finalizado y sincronizado."
-      );
-      return;
-    }*/
     router.push({
       pathname: "/(tabs)/service-details",
       params: {
         orderId: order?.id.toString(),
         serviceId: serviceId.toString(),
         serviceName:
-          order?.services.find((s) => s.id === serviceId)?.name || "Servicio",
+          order?.services.find((s) => s.id == serviceId)?.name || "Servicio",
         isLocked: Number(isReportLocked),
       },
     });
@@ -215,10 +289,10 @@ export default function OrderDetailsScreen() {
       });
 
       const reportIndex = allReports.findIndex(
-        (r) => r.order_id === Number(orderId)
+        (r) => r.order_id == Number(orderId)
       );
 
-      if (reportIndex !== -1) {
+      if (reportIndex != -1) {
         allReports[reportIndex] = {
           ...allReports[reportIndex],
           notes,
@@ -239,6 +313,7 @@ export default function OrderDetailsScreen() {
           reviews: [],
           products: [],
           pests: [],
+          services_completed: [],
           is_finalized: false,
           is_synchronized: false,
           status_id: order?.status_id ?? 1,
@@ -271,7 +346,7 @@ export default function OrderDetailsScreen() {
     try {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
+      if (status != "granted") {
         Alert.alert("Error", "Se necesita permiso para acceder a la galería");
         return;
       }
@@ -320,7 +395,7 @@ export default function OrderDetailsScreen() {
 
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== "granted") {
+      if (status != "granted") {
         Alert.alert("Error", "Se necesita permiso para acceder a la cámara");
         return;
       }
@@ -412,10 +487,10 @@ export default function OrderDetailsScreen() {
               const allReports: Report[] =
                 (await loadFromJsonFile("reports")) || [];
               const reportIndex = allReports.findIndex(
-                (r) => r.order_id === Number(orderId)
+                (r) => r.order_id == Number(orderId)
               );
 
-              if (reportIndex !== -1) {
+              if (reportIndex != -1) {
                 const updatedReport = {
                   ...allReports[reportIndex],
                   customer_signature: null,
@@ -465,7 +540,7 @@ export default function OrderDetailsScreen() {
   };
 
   const renderServices = () => {
-    if (!order?.services || order?.services.length === 0) {
+    if (!order?.services || order?.services.length == 0) {
       return (
         <View style={styles.emptyContainer}>
           <Ionicons name="file-tray-outline" size={48} color="#C4C4C4" />
@@ -480,21 +555,66 @@ export default function OrderDetailsScreen() {
     }
 
     return order.services.map((service, index) => {
-      const isComplete = isServiceComplete(service);
+      const isComplete = isServiceComplete(service.id);
 
       return (
-        <View
+        <TouchableOpacity
           key={service.id}
           style={[
             styles.serviceItem,
-            index === order.services.length - 1 && styles.lastServiceItem,
+            index == order.services.length - 1 && styles.lastServiceItem,
+            isComplete && styles.serviceItemCompleted
           ]}
+          onPress={() => handleServicePress(service.id)}
+          activeOpacity={0.7}
         >
           <View style={styles.serviceContent}>
             <View style={styles.serviceHeader}>
-              <ThemedText style={styles.serviceName} numberOfLines={1}>
-                {service.name}
-              </ThemedText>
+              <View style={styles.serviceTitleContainer}>
+                <ThemedText style={styles.serviceName} numberOfLines={1}>
+                  {service.name}
+                </ThemedText>
+                {isComplete && (
+                  <View style={styles.completedBadge}>
+                    <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                    <ThemedText style={styles.completedText}>
+                      Completado
+                    </ThemedText>
+                  </View>
+                )}
+              </View>
+              
+              {/* Botón para marcar/desmarcar como completado */}
+              {!isReportLocked && (
+                <TouchableOpacity
+                  onPress={async (e) => {
+                    e.stopPropagation();
+                    const newCompleteStatus = !isComplete;
+                    const success = await updateServiceCompletion(service.id, newCompleteStatus);
+                    
+                    if (success) {
+                      Alert.alert(
+                        "Éxito",
+                        newCompleteStatus 
+                          ? `Servicio "${service.name}" marcado como completado`
+                          : `Servicio "${service.name}" marcado como pendiente`
+                      );
+                    } else {
+                      Alert.alert("Error", "No se pudo actualizar el estado del servicio");
+                    }
+                  }}
+                  style={[
+                    styles.completeButton,
+                    isComplete ? styles.completeButtonActive : styles.completeButtonInactive
+                  ]}
+                >
+                  <Ionicons 
+                    name={isComplete ? "checkmark-done" : "ellipse-outline"} 
+                    size={20} 
+                    color={isComplete ? "#FFFFFF" : "#6B7280"} 
+                  />
+                </TouchableOpacity>
+              )}
             </View>
 
             {service.description && (
@@ -507,18 +627,31 @@ export default function OrderDetailsScreen() {
               </ThemedText>
             )}
 
+            {/* Contador de dispositivos si existen */}
+            {service.devices && service.devices.length > 0 && (
+              <View style={styles.deviceCountContainer}>
+                <Ionicons name="hardware-chip-outline" size={14} color="#6B7280" />
+                <ThemedText style={styles.deviceCountText}>
+                  {service.devices.length} dispositivo(s)
+                </ThemedText>
+              </View>
+            )}
+
             <TouchableOpacity
               onPress={() => handleServicePress(service.id)}
-              style={styles.viewServiceButton}
+              style={[
+                styles.viewServiceButton,
+                isComplete && styles.viewServiceButtonCompleted
+              ]}
               activeOpacity={0.7}
             >
               <ThemedText style={styles.viewServiceButtonText}>
-                Ver Servicio
+                {isComplete ? "Ver Detalles" : "Ver Servicio"}
               </ThemedText>
               <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
-        </View>
+        </TouchableOpacity>
       );
     });
   };
@@ -550,7 +683,25 @@ export default function OrderDetailsScreen() {
           </ThemedText>
         </View>
 
+        <View style={styles.signatureInstructions}>
+          <View style={styles.instructionItem}>
+            <Ionicons name="information-circle" size={20} color="#0d6efd" />
+            <ThemedText style={styles.instructionText}>
+              Por favor, solicite al cliente que firme en el área designada
+            </ThemedText>
+          </View>
+          <View style={styles.instructionItem}>
+            <Ionicons name="create" size={20} color="#0d6efd" />
+            <ThemedText style={styles.instructionText}>
+              Puede usar su dedo o un lápiz táctil para firmar
+            </ThemedText>
+          </View>
+        </View>
+
         <View style={styles.signatureNameContainer}>
+          <ThemedText style={styles.signatureNameLabel}>
+            Agrega el nombre y firma del cliente
+          </ThemedText>
           <TextInput
             style={[
               styles.signatureNameInput,
@@ -561,33 +712,132 @@ export default function OrderDetailsScreen() {
             ]}
             value={signatureName}
             onChangeText={setSignatureName}
-            placeholder="Nombre de quien firma"
+            placeholder="Nombre del cliente"
             placeholderTextColor="#9CA3AF"
           />
         </View>
 
         <View style={styles.signatureCanvasContainer}>
-          <SignatureCanvas
-            ref={signatureRef}
-            onOK={(signature) => handleSignature(signature, signatureName)}
-            onEmpty={() =>
-              Alert.alert("Error", "Por favor firme antes de guardar")
-            }
-            descriptionText="Firme aquí"
-            clearText="Limpiar"
-            confirmText="Guardar"
-            webStyle={`.m-signature-pad--footer { 
-              display: flex; justify-content: space-between; 
-            }
-            .m-signature-pad--footer .button {
-              background-color: ${Colors[colorScheme ?? "light"].tint};
-              color: white;
-              padding: 10px 20px;
-              border-radius: 5px;
-              border: none;
-              marginTop: 40px;
-            }`}
-          />
+          <View style={styles.signatureCanvasWrapper}>
+            <SignatureCanvas
+              ref={signatureRef}
+              onOK={(signature) => handleSignature(signature, signatureName)}
+              onEmpty={() =>
+                Alert.alert("Error", "Por favor firme antes de guardar")
+              }
+              descriptionText="Firme en el área de arriba"
+              clearText="Limpiar"
+              confirmText="Guardar"
+              webStyle={`
+              body, html {
+                margin: 0;
+                padding: 0;
+                background-color: #ffffff;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+              }
+              .m-signature-pad {
+                position: relative;
+                font-size: 10px;
+                width: 100%;
+                height: 100%;
+                max-width: none;
+                max-height: none;
+                border: none;
+                background-color: #ffffff;
+                box-shadow: none;
+                border-radius: 12px;
+                display: flex;
+                flex-direction: column;
+              }
+              .m-signature-pad--body {
+                position: relative;
+                flex: 1;
+                border: 2px dashed #d1d5db;
+                border-radius: 8px;
+                background-color: #ffffff;
+                margin: 16px;
+                margin-bottom: 8px;
+                overflow: hidden;
+              }
+              .m-signature-pad--body canvas {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                border-radius: 6px;
+              }
+              .m-signature-pad--footer {
+                position: relative;
+                left: 0;
+                bottom: 0;
+                width: 100%;
+                height: 60px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0 16px 16px 16px;
+                background-color: transparent;
+                box-sizing: border-box;
+              }
+              .m-signature-pad--footer .button {
+                height: 36px;
+                min-width: 120px;
+                padding: 0 24px;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+              }
+              .m-signature-pad--footer .button.clear {
+                background-color: #dc3545;
+                color: white;
+              }
+              .m-signature-pad--footer .button.clear:active {
+                background-color: #bd2130;
+                transform: scale(0.98);
+              }
+              .m-signature-pad--footer .button.save {
+                background-color: #0d6efd;
+                color: white;
+              }
+              .m-signature-pad--footer .button.save:active {
+                background-color: #0b5ed7;
+                transform: scale(0.98);
+              }
+              .m-signature-pad--footer .button:hover {
+                opacity: 0.9;
+              }
+              .description {
+                display: block;
+                text-align: center;
+                color: #6b7280;
+                font-size: 14px;
+                margin-top: 8px;
+                margin-bottom: 8px;
+                padding: 0 16px;
+              }
+            `}
+              backgroundColor="#ffffff"
+              penColor="#000000"
+              minWidth={2}
+              maxWidth={4}
+            />
+          </View>
+
+          <View style={styles.signatureCanvasFooter}>
+            <ThemedText style={styles.signatureCanvasHint}>
+              Deslice su dedo sobre el área punteada para firmar
+            </ThemedText>
+          </View>
         </View>
       </ThemedView>
     );
@@ -625,7 +875,7 @@ export default function OrderDetailsScreen() {
               const allReports: Report[] =
                 (await loadFromJsonFile("reports")) || [];
               const updatedReport = allReports.find(
-                (r) => r.order_id === Number(orderId)
+                (r) => r.order_id == Number(orderId)
               );
 
               if (!updatedReport) {
@@ -639,7 +889,7 @@ export default function OrderDetailsScreen() {
 
                 if (syncSuccess) {
                   const syncedReports = allReports.map((report) =>
-                    report.order_id === updatedReport.order_id
+                    report.order_id == updatedReport.order_id
                       ? {
                           ...report,
                           is_synchronized: true,
@@ -650,7 +900,7 @@ export default function OrderDetailsScreen() {
 
                   await saveToJsonFile("reports", syncedReports);
                   setCurrentReport(
-                    syncedReports.find((r) => r.order_id === Number(orderId)) ||
+                    syncedReports.find((r) => r.order_id == Number(orderId)) ||
                       null
                   );
 
@@ -716,9 +966,9 @@ export default function OrderDetailsScreen() {
         minute: "2-digit",
         hour12: false,
       });
-      const reportIndex = allReports.findIndex((r) => r.order_id === orderId);
+      const reportIndex = allReports.findIndex((r) => r.order_id == orderId);
 
-      if (reportIndex !== -1) {
+      if (reportIndex != -1) {
         allReports[reportIndex] = {
           ...allReports[reportIndex],
           user_id: userId ?? null,
@@ -745,6 +995,7 @@ export default function OrderDetailsScreen() {
           reviews: [],
           products: [],
           pests: [],
+          services_completed: [],
           is_finalized: isFinalized,
           is_synchronized: false,
           status_id: 1,
@@ -783,7 +1034,7 @@ export default function OrderDetailsScreen() {
 
     for (const service of order.services) {
       const matchingDevice = service.devices?.find(
-        (device: Device) => device.code === data
+        (device: Device) => device.code == data
       );
       if (matchingDevice) {
         deviceFound = matchingDevice;
@@ -803,7 +1054,7 @@ export default function OrderDetailsScreen() {
 
     try {
       const allReports: Report[] = (await loadFromJsonFile("reports")) || [];
-      let report = allReports.find((r) => r.order_id === Number(orderId));
+      let report = allReports.find((r) => r.order_id == Number(orderId));
 
       if (!report) {
         report = {
@@ -822,6 +1073,7 @@ export default function OrderDetailsScreen() {
           reviews: [],
           products: [],
           pests: [],
+          services_completed: [],
           is_finalized: false,
           is_synchronized: false,
           status_id: order.status_id ?? 1,
@@ -830,11 +1082,11 @@ export default function OrderDetailsScreen() {
       }
 
       let reviewIndex = report.reviews.findIndex(
-        (r) => r.device_id === deviceFound?.id
+        (r) => r.device_id == deviceFound?.id
       );
       let review: Review;
 
-      if (reviewIndex === -1) {
+      if (reviewIndex == -1) {
         review = {
           device_id: deviceFound.id,
           pests: [],
@@ -914,7 +1166,7 @@ export default function OrderDetailsScreen() {
 
       if (syncSuccess) {
         const updatedReports = allReports.map((report) => {
-          if (report.order_id === currentReport.order_id) {
+          if (report.order_id == currentReport.order_id) {
             return {
               ...report,
               is_synchronized: true,
@@ -927,7 +1179,7 @@ export default function OrderDetailsScreen() {
         await saveToJsonFile("reports", updatedReports);
 
         setCurrentReport(
-          updatedReports.find((r) => r.order_id === currentReport.order_id) ||
+          updatedReports.find((r) => r.order_id == currentReport.order_id) ||
             null
         );
 
@@ -952,10 +1204,10 @@ export default function OrderDetailsScreen() {
       const allReports: Report[] = (await loadFromJsonFile("reports")) || [];
 
       const reportIndex = allReports.findIndex(
-        (r) => r.order_id === Number(orderId)
+        (r) => r.order_id == Number(orderId)
       );
 
-      if (reportIndex !== -1) {
+      if (reportIndex != -1) {
         allReports[reportIndex] = {
           ...allReports[reportIndex],
           is_finalized: false,
@@ -1000,6 +1252,15 @@ export default function OrderDetailsScreen() {
         <ThemedText type="title" style={styles.title}>
           Orden #{order.folio.split("-")[1]} - ID: {order.id}
         </ThemedText>
+        
+        {/* Mostrar contador de servicios completados */}
+        {order?.services && (
+          <View style={styles.completionBadge}>
+            <ThemedText style={styles.completionText}>
+              {completedServices.length}/{order.services.length}
+            </ThemedText>
+          </View>
+        )}
       </View>
       <ScrollView
         style={styles.scrollView}
@@ -1114,6 +1375,25 @@ export default function OrderDetailsScreen() {
                 </ThemedText>
               </View>
             </View>
+            
+            {/* Barra de progreso de servicios */}
+            {order?.services && order.services.length > 0 && (
+              <View style={styles.progressContainer}>
+                <View style={styles.progressBar}>
+                  <View 
+                    style={[
+                      styles.progressFill,
+                      { 
+                        width: `${(completedServices.length / order.services.length) * 100}%` 
+                      }
+                    ]} 
+                  />
+                </View>
+                <ThemedText style={styles.progressText}>
+                  {completedServices.length} de {order.services.length} servicios completados
+                </ThemedText>
+              </View>
+            )}
 
             <View style={styles.servicesList}>{renderServices()}</View>
           </Card.Content>
@@ -1131,7 +1411,6 @@ export default function OrderDetailsScreen() {
               {isReportLocked && (
                 <View style={styles.lockedBadge}>
                   <Ionicons name="lock-closed" size={14} color="#FFFFFF" />
-                  <ThemedText style={styles.lockedBadgeText}>Inactivo</ThemedText>
                 </View>
               )}
             </View>
@@ -1144,7 +1423,8 @@ export default function OrderDetailsScreen() {
                     Escaneo QR no disponible
                   </ThemedText>
                   <ThemedText style={styles.lockedFunctionSubtext}>
-                    El reporte finalizado y sincronizado no permite modificaciones
+                    El reporte finalizado y sincronizado no permite
+                    modificaciones
                   </ThemedText>
                 </View>
               ) : !showQRScanner ? (
@@ -1266,7 +1546,6 @@ export default function OrderDetailsScreen() {
               {isReportLocked ? (
                 <View style={styles.lockedBadge}>
                   <Ionicons name="lock-closed" size={14} color="#FFFFFF" />
-                  <ThemedText style={styles.lockedBadgeText}>Inactivo</ThemedText>
                 </View>
               ) : !isEditingNotes ? (
                 <TouchableOpacity
@@ -1299,7 +1578,9 @@ export default function OrderDetailsScreen() {
 
             {isReportLocked ? (
               <View style={styles.lockedNotesContainer}>
-                <ThemedText style={notes ? styles.notesText : styles.emptyNotesText}>
+                <ThemedText
+                  style={notes ? styles.notesText : styles.emptyNotesText}
+                >
                   {notes || "No hay notas registradas"}
                 </ThemedText>
                 <View style={styles.lockedOverlay}>
@@ -1370,7 +1651,6 @@ export default function OrderDetailsScreen() {
               {isReportLocked ? (
                 <View style={styles.lockedBadge}>
                   <Ionicons name="lock-closed" size={14} color="#FFFFFF" />
-                  <ThemedText style={styles.lockedBadgeText}>Inactivo</ThemedText>
                 </View>
               ) : (
                 <TouchableOpacity
@@ -1398,7 +1678,11 @@ export default function OrderDetailsScreen() {
                       />
                     </View>
                     <View style={styles.signatureStatus}>
-                      <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={16}
+                        color="#10B981"
+                      />
                       <ThemedText style={styles.signatureStatusText}>
                         Firma registrada (Bloqueada)
                       </ThemedText>
@@ -1539,88 +1823,136 @@ export default function OrderDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  lockedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#6B7280',
+  signatureModalContainer: {
+    flex: 1,
+    backgroundColor: "#f8fafc",
+  },
+  signatureInstructions: {
+    backgroundColor: "#e9f2fb",
+    borderRadius: 10,
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  instructionItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
+  instructionText: {
+    fontSize: 14,
+    color: "#374151",
+    marginLeft: 10,
+    flex: 1,
+    lineHeight: 20,
+  },
+  signatureCanvasWrapper: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    overflow: "hidden",
+  },
+  signatureCanvasFooter: {
+    paddingTop: 12,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    alignItems: "center",
+  },
+  signatureCanvasHint: {
+    fontSize: 14,
+    color: "#6b7280",
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+  lockedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#6B7280",
+    paddingHorizontal: 8,
+    paddingVertical: 8,
     borderRadius: 12,
   },
   lockedBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#FFFFFF",
     marginLeft: 4,
   },
   lockedFunctionContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F9FAFB',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F9FAFB",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderStyle: 'dashed',
+    borderColor: "#E5E7EB",
+    borderStyle: "dashed",
     padding: 32,
   },
   lockedFunctionText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#6B7280',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#6B7280",
+    textAlign: "center",
     marginTop: 12,
     marginBottom: 4,
   },
   lockedFunctionSubtext: {
     fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
+    color: "#9CA3AF",
+    textAlign: "center",
   },
   lockedNotesContainer: {
-    position: 'relative',
+    position: "relative",
     minHeight: 120,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: "#F9FAFB",
     borderRadius: 8,
     padding: 16,
     marginTop: 8,
   },
   lockedOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(249, 250, 251, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(249, 250, 251, 0.9)",
+    justifyContent: "center",
+    alignItems: "center",
     borderRadius: 8,
   },
   lockedOverlayText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: "#6B7280",
     marginTop: 8,
   },
   lockedSignatureContainer: {
     opacity: 0.7,
   },
   lockedNoSignature: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F9FAFB',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F9FAFB",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderStyle: 'dashed',
+    borderColor: "#E5E7EB",
+    borderStyle: "dashed",
     padding: 32,
   },
   lockedNoSignatureText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#6B7280',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#6B7280",
+    textAlign: "center",
     marginTop: 12,
     marginBottom: 4,
   },
   lockedNoSignatureSubtext: {
     fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
+    color: "#9CA3AF",
+    textAlign: "center",
   },
   card: {
     borderRadius: 6,
@@ -1631,8 +1963,18 @@ const styles = StyleSheet.create({
     margin: 10,
   },
   signatureNameContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    marginHorizontal: 16,
+    marginBottom: 4,
+    padding: 12,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
   signatureNameInput: {
     borderWidth: 1,
@@ -1640,6 +1982,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
+    backgroundColor: "#ffffff",
+  },
+  signatureNameLabel: {
+    fontSize: 16,
+    color: "#374151",
+    fontWeight: "600",
+    marginBottom: 16,
   },
   signatureName: {
     fontSize: 14,
@@ -1653,6 +2002,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#4CAF50",
     padding: 16,
     marginTop: 20,
+    borderRadius: 8,
+    marginHorizontal: 10,
   },
   synchronizedText: {
     color: "white",
@@ -1995,6 +2346,7 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 15,
     lineHeight: 22,
+    backgroundColor: "#ffffff",
   },
   characterCount: {
     alignItems: "flex-end",
@@ -2104,17 +2456,13 @@ const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 20,
+    padding: 10,
     paddingTop: 50,
     backgroundColor: "#ffffff",
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 3,
-    zIndex: 10,
+    marginBottom: 5,
   },
   backButton: {
     marginRight: 15,
@@ -2184,15 +2532,20 @@ const styles = StyleSheet.create({
   serviceItem: {
     flexDirection: "row",
     marginBottom: 16,
+    backgroundColor: "#E9F2FB",
+    borderRadius: 12,
+    padding: 12,
+  },
+  serviceItemCompleted: {
+    backgroundColor: "#F0F9FF",
+    borderColor: "#0d6efd",
+    borderWidth: 1,
   },
   lastServiceItem: {
     marginBottom: 0,
   },
   serviceContent: {
     flex: 1,
-    backgroundColor: "#E9F2FB",
-    borderRadius: 12,
-    padding: 12,
     zIndex: 2,
   },
   serviceHeader: {
@@ -2200,6 +2553,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 8,
+  },
+  serviceTitleContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
   },
   serviceName: {
     fontSize: 16,
@@ -2214,21 +2574,20 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 12,
   },
-  signatureModalContainer: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
   signatureHeader: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
+    padding: 10,
+    paddingTop: 50,
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
+    backgroundColor: "#ffffff",
   },
   signatureTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "600",
     marginLeft: 16,
+    color: "#000",
   },
   signatureCanvasContainer: {
     flex: 1,
@@ -2236,5 +2595,83 @@ const styles = StyleSheet.create({
   },
   servicesList: {
     marginTop: 8,
+  },
+  // Nuevos estilos para la funcionalidad de servicios completados
+  completedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#D1FAE5",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  completedText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#065F46",
+    marginLeft: 4,
+  },
+  completeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
+  },
+  completeButtonActive: {
+    backgroundColor: "#10B981",
+  },
+  completeButtonInactive: {
+    backgroundColor: "#F3F4F6",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+  },
+  deviceCountContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  deviceCountText: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginLeft: 6,
+  },
+  viewServiceButtonCompleted: {
+    backgroundColor: "#10B981",
+  },
+  completionBadge: {
+    backgroundColor: "#E5E7EB",
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginLeft: 8,
+  },
+  completionText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#4B5563",
+  },
+  progressContainer: {
+    marginBottom: 16,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 4,
+    overflow: "hidden",
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: "#0d6efd",
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
   },
 });

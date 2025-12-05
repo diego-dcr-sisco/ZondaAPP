@@ -98,7 +98,7 @@ export default function SyncReportsScreen() {
 
       // 2. Simular envío al servidor (reemplazar con tu API real)
       const syncSuccess = await syncReportsToServer(reportsToSync);
-      console.log("syncSuccess:", syncSuccess);
+      //console.log("syncSuccess:", syncSuccess);
 
       if (syncSuccess) {
         // 3. Actualizar estado local
@@ -145,7 +145,7 @@ export default function SyncReportsScreen() {
   const toggleReportSelection = (orderId: number) => {
     setSelectedReports((prev) =>
       prev.includes(orderId)
-        ? prev.filter((id) => id !== orderId)
+        ? prev.filter((id) => id != orderId)
         : [...prev, orderId]
     );
   };

@@ -1,10 +1,10 @@
 // utils/handleReports.ts
-import axiosInstance from "../config/axios";
 import axios from "axios";
-import { Report } from "../types/report";
 import {
-  Alert
+    Alert
 } from 'react-native';
+import axiosInstance from "../config/axios";
+import { Report } from "../types/report";
 
 /**
  * Envía reportes uno por uno a /reports/handle y espera confirmación antes de continuar.
@@ -16,7 +16,7 @@ export const syncReportsToServer = async (
     //console.log('Reporte: ', JSON.stringify(report, null, 2))
     try {
       const response = await axiosInstance.post("/reports/handle", report);
-      console.log(`Reporte ${report.order_id} sincronizado:`, response.data);
+      //console.log(`Reporte ${report.order_id} sincronizado:`, response.data);
     } catch (error) {
       /*console.error(
         `Error al sincronizar el reporte ${report.order_id}:`,

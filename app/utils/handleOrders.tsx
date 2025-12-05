@@ -84,7 +84,7 @@ export const getOrders = async (userId: string, date: string) => {
         combined_reports.push(newReport);
       }
       // Si existe reporte, aplicar lógica de prioridad
-      else*/ if (report_index !== -1) {
+      else*/ if (report_index != -1) {
         applyPriorityLogic(order, combined_reports[report_index]);
       }
     });
@@ -124,7 +124,7 @@ const applyPriorityLogic = (order: Order, localReport: Report) => {
   const localStatus = localReport.is_finalized ? 3 : 1;
   const serverStatus = order.status_id ?? 1;
 
-  if (serverStatus === 1 && localStatus !== 1) {
+  if (serverStatus == 1 && localStatus != 1) {
     if (localReport.is_finalized && localReport.is_synchronized) {
       order.status_id = 1;
       localReport.is_finalized = false;
@@ -152,6 +152,7 @@ const createBasicReport = (orderId: number, userId: string): Report => ({
   reviews: [],
   products: [],
   pests: [],
+  services_completed: [],
   is_finalized: false,
   is_synchronized: false,
 });

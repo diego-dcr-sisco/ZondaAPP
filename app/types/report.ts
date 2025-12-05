@@ -12,6 +12,7 @@ export interface Report {
   reviews: Review[];
   products: ProductReview[];
   pests: PestReview[];
+  services_completed: number[];
 
   finalized_at?: string;
   reopened_at?: string;

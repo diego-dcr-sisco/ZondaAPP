@@ -26,8 +26,8 @@ import { Product } from "../types/product";
 import { PestReview, ProductReview, Report } from "../types/report";
 import { Service } from "../types/service";
 
-import { useAuth } from "../context/AuthContext";
 import { Picker } from "@react-native-picker/picker";
+import { useAuth } from "../context/AuthContext";
 
 interface SelectedProduct {
   product: (Product & { application_methods?: ApplicationMethod[] }) | null;
@@ -40,7 +40,7 @@ const base_color = "#032859";
 const primary_color = "#0d6efd";
 const text_color = "#000";
 const header_color = "#D94A3D";
-const success_color = "#198754"
+const success_color = "#198754";
 
 export default function ServiceDetailsScreen() {
   const colorScheme = useColorScheme();
@@ -61,7 +61,7 @@ export default function ServiceDetailsScreen() {
   const hasDeviceReview = (deviceId: number): boolean => {
     if (!currentReport || !currentReport.reviews) return false;
     return currentReport.reviews.some(
-      (review) => review.device_id === deviceId
+      (review) => review.device_id == deviceId
     );
   };
 
@@ -105,7 +105,7 @@ export default function ServiceDetailsScreen() {
     }
     // Si no hay métodos disponibles, mostrar un mensaje
     else {
-      console.log("No hay métodos de aplicación disponibles");
+      //console.log("No hay métodos de aplicación disponibles");
       Alert.alert(
         "Información",
         "Este producto no tiene métodos de aplicación configurados"
@@ -256,12 +256,12 @@ export default function ServiceDetailsScreen() {
   };
 
   const removePest = (pest_id: number) => {
-    setPests(pests.filter((p) => p.pest_id !== pest_id));
+    setPests(pests.filter((p) => p.pest_id != pest_id));
   };
 
   const removeProduct = (product_id: number) => {
     setProducts(
-      products.filter((product) => product.product_id !== product_id)
+      products.filter((product) => product.product_id != product_id)
     );
   };
 
@@ -269,9 +269,9 @@ export default function ServiceDetailsScreen() {
     try {
       const reports = (await loadFromJsonFile("reports")) || [];
       const reportIndex = reports.findIndex(
-        (r: Report) => r.order_id === currentReport?.order_id
+        (r: Report) => r.order_id == currentReport?.order_id
       );
-      if (reportIndex !== -1) {
+      if (reportIndex != -1) {
         reports[reportIndex] = report;
       } else {
         reports.push(report);
@@ -302,7 +302,7 @@ export default function ServiceDetailsScreen() {
               const currentReport: Report | undefined = await loadFromJsonFile(
                 "reports"
               ).then((reports: Report[]) =>
-                reports.find((r) => r.order_id === Number(orderId))
+                reports.find((r) => r.order_id == Number(orderId))
               );
 
               const updatedReport: Report = {
@@ -333,14 +333,15 @@ export default function ServiceDetailsScreen() {
                     count: p.count,
                   })),
                 ],
+                services_completed: currentReport?.services_completed || [],
                 is_finalized: false,
                 is_synchronized: false,
               };
 
-              if (service?.prefix === 1 && devices.length > 0) {
+              if (service?.prefix == 1 && devices.length > 0) {
                 updatedReport.reviews = devices.map((device) => {
                   const existingReview = currentReport?.reviews?.find(
-                    (r) => r.device_id === device.id
+                    (r) => r.device_id == device.id
                   );
                   return (
                     existingReview || {
@@ -355,6 +356,15 @@ export default function ServiceDetailsScreen() {
                   );
                 });
               }
+
+              updatedReport.services_completed = [
+                ...(currentReport?.services_completed || []),
+                ...(currentReport?.services_completed?.includes(
+                  Number(serviceId)
+                )
+                  ? []
+                  : [Number(serviceId)]),
+              ];
 
               const success = await saveReport(updatedReport);
 
@@ -422,7 +432,7 @@ export default function ServiceDetailsScreen() {
     devices.length > 0 && devices.every((device) => hasDeviceReview(device.id));
   const hasProductsAdded = products.length > 0;
   const canFinishService =
-    (service?.prefix !== 1 && hasProductsAdded) || allDevicesReviewed;
+    (service?.prefix != 1 && hasProductsAdded) || allDevicesReviewed;
 
   return (
     <ThemedView style={styles.container}>
@@ -537,8 +547,8 @@ export default function ServiceDetailsScreen() {
                           <ThemedText style={styles.detailText}>
                             {
                               availableProducts
-                                .find((p) => p.id === product.product_id)
-                                ?.lots.find((l) => l.id === product.lot_id)
+                                .find((p) => p.id == product.product_id)
+                                ?.lots.find((l) => l.id == product.lot_id)
                                 ?.registration_number
                             }
                           </ThemedText>
@@ -554,7 +564,7 @@ export default function ServiceDetailsScreen() {
                           <ThemedText style={styles.detailText}>
                             {
                               availableAppMethods.find(
-                                (m) => m.id === product.app_method_id
+                                (m) => m.id == product.app_method_id
                               )?.name
                             }
                           </ThemedText>
@@ -587,7 +597,7 @@ export default function ServiceDetailsScreen() {
                 selectedValue={selectedProduct.product?.id || ""}
                 onValueChange={(itemValue) => {
                   const product = availableProducts.find(
-                    (p) => p.id === itemValue
+                    (p) => p.id == itemValue
                   );
                   if (product) handleProductSelect(product);
                 }}
@@ -608,7 +618,7 @@ export default function ServiceDetailsScreen() {
                     selectedValue={selectedProduct.selectedLot?.id || ""}
                     onValueChange={(itemValue) => {
                       const lot = selectedProduct.product?.lots.find(
-                        (l) => l.id === itemValue
+                        (l) => l.id == itemValue
                       );
                       setSelectedProduct({
                         ...selectedProduct,
@@ -635,7 +645,7 @@ export default function ServiceDetailsScreen() {
                       onValueChange={(itemValue) => {
                         const method =
                           selectedProduct.product?.application_methods?.find(
-                            (m) => m.id === itemValue
+                            (m) => m.id == itemValue
                           );
                         setSelectedProduct({
                           ...selectedProduct,
@@ -724,7 +734,7 @@ export default function ServiceDetailsScreen() {
             {pests.length > 0 ? (
               pests.map((pest, index) => {
                 const pestInfo = availablePests.find(
-                  (p) => p.id === pest.pest_id
+                  (p) => p.id == pest.pest_id
                 );
                 return (
                   <View
@@ -770,7 +780,7 @@ export default function ServiceDetailsScreen() {
               <Picker
                 selectedValue={selectedPest?.id || ""}
                 onValueChange={(itemValue) => {
-                  const pest = availablePests.find((p) => p.id === itemValue);
+                  const pest = availablePests.find((p) => p.id == itemValue);
                   setSelectedPest(pest || null);
                 }}
                 style={styles.picker}

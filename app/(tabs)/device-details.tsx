@@ -543,6 +543,7 @@ export default function DeviceDetailsScreen() {
           : [deviceReview],
         products: currentReport?.products || [],
         pests: currentReport?.pests || [],
+        services_completed: currentReport?.services_completed || [],
         is_finalized: false,
         is_synchronized: false,
       };

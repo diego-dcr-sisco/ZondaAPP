@@ -1,5 +1,5 @@
 import NetInfo from "@react-native-community/netinfo";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -16,8 +16,7 @@ import {
   getOrdersHistory,
   loadFromJsonFile,
   saveToJsonFile,
-  updateOrdersHistory,
-  clearJsonFile,
+  updateOrdersHistory
 } from "../storage/jsonFileStorage";
 
 import { OrderCard } from "../../components/OrderCard";
@@ -95,7 +94,7 @@ export default function OrdersScreen() {
           const orderDate = new Date(order.programmed_date)
             .toISOString()
             .split("T")[0];
-          return orderDate === dateStr;
+          return orderDate == dateStr;
         });
 
         if (filteredOrders.length > 0) {
