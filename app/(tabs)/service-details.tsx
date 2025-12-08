@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -125,42 +125,6 @@ export default function ServiceDetailsScreen() {
 
   const { logout, user } = useAuth();
 
-  useEffect(() => {
-    const fetchOrderDetails = async () => {
-      try {
-        const orders: Order[] = await loadFromJsonFile("orders");
-        //console.log(JSON.stringify(orders, null, 2));
-        const mockOrder: Order | undefined = orders.find(
-          (ord: Order) => ord.id == Number(orderId)
-        );
-        const service = mockOrder?.services.find(
-          (serv: Service) => serv.id == Number(serviceId)
-        );
-
-        const reports: Report[] = (await loadFromJsonFile("reports")) || [];
-        const report = reports.find((r) => r.order_id == Number(orderId));
-
-        if (service) {
-          setService(service);
-          setAvailableProducts(service.products);
-          setAvailablePests(service.pests);
-          setAvailableAppMethods(service.application_methods);
-          setDevices(service.devices);
-        }
-
-        if (report) {
-          setCurrentReport(report);
-          setProducts(report.products);
-          setPests(report.pests);
-        }
-      } catch (error) {
-        console.error("Error fetching order details:", error);
-      }
-    };
-
-    fetchOrderDetails();
-  }, []);
-
   useFocusEffect(
     React.useCallback(() => {
       const fetchData = async () => {
@@ -181,6 +145,14 @@ export default function ServiceDetailsScreen() {
           if (service) {
             setService(service);
             setDevices(service.devices);
+            setAvailableProducts(service.products || []);
+            setAvailablePests(service.pests || []);
+            setAvailableAppMethods(service.application_methods || []);
+          }
+          
+          if (report) {
+            setProducts(report.products || []);
+            setPests(report.pests || []);
           }
         } catch (error) {
           console.error("Error fetching data:", error);
@@ -196,15 +168,12 @@ export default function ServiceDetailsScreen() {
       pathname: "/(tabs)/device-details",
       params: {
         orderId: orderId,
-        serviceId: serviceId.toString(),
+        serviceId: serviceId,
         serviceName: service?.name,
         deviceId: device.id.toString(),
-        deviceData: JSON.stringify(device),
-        productsData: JSON.stringify(service?.products),
-        pestsData: JSON.stringify(service?.pests),
         isLocked: locked ? "1" : "0",
       },
-    });
+    }); 
   };
 
   const addProduct = () => {
@@ -870,11 +839,10 @@ export const styles = StyleSheet.create({
     padding: 5,
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
     flex: 1,
   },
-
   // Card Styles
   card: {
     margin: 10,
@@ -938,7 +906,7 @@ export const styles = StyleSheet.create({
   deviceHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 2 ,
     flexWrap: "wrap",
   },
   deviceCode: {

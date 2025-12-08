@@ -23,7 +23,6 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "usesCleartextTraffic": true,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.INTERNET",
@@ -36,7 +35,23 @@
       "output": "static",
       "favicon": "./assets/images/icon.png"
     },
-    "plugins": ["expo-router", "expo-font", "expo-web-browser"],
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-web-browser",
+      "expo-build-properties",
+      {
+        "android": {
+          "compileSdkVersion": 34,
+          "targetSdkVersion": 34,
+          "minSdkVersion": 29,
+          "buildToolsVersion": "34.0.0"
+        },
+        "ios": {
+          "deploymentTarget": "15.1"
+        }
+      }
+    ],
     "experiments": {
       "typedRoutes": true
     },

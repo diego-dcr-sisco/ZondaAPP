@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useRef, useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -1112,13 +1112,9 @@ export default function OrderDetailsScreen() {
         pathname: "/(tabs)/device-details",
         params: {
           orderId: orderId,
-          serviceId: serviceFound.id.toString(),
+          serviceId: serviceFound.id,
           serviceName: serviceFound.name,
           deviceId: deviceFound.id.toString(),
-          deviceData: JSON.stringify(deviceFound),
-          productsData: JSON.stringify(serviceFound.products),
-          pestsData: JSON.stringify(serviceFound.pests),
-          reviewData: JSON.stringify(review),
         },
       });
     } catch (error) {

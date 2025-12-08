@@ -158,7 +158,7 @@ export default function OrdersScreen() {
     });
 
     return () => unsubscribe();
-  }, [isOnline, loadData]); // Agregar loadData a las dependencias
+  }, [isOnline, loadData]);
 
   const onDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(false);

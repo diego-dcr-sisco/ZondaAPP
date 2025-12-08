@@ -1,3 +1,7 @@
+import { Ionicons } from "@expo/vector-icons";
+import { Picker } from "@react-native-picker/picker";
+import { useFocusEffect } from "@react-navigation/native";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -7,17 +11,18 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
-import { Picker } from "@react-native-picker/picker";
-import { useLocalSearchParams, useRouter } from "expo-router";
 import { Card } from "react-native-paper";
 import { ThemedText } from "../../components/ThemedText";
 import { ThemedView } from "../../components/ThemedView";
 import { Colors } from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
 import { loadFromJsonFile, saveToJsonFile } from "../storage/jsonFileStorage";
+import { ApplicationMethod } from "../types/application-method";
 import { Device } from "../types/device";
+import { Lot } from "../types/lot";
+import { Order } from "../types/order";
+import { Pest } from "../types/pest";
+import { Product } from "../types/product";
 import { Question } from "../types/question";
 import {
   Answer as AnswerInterface,
@@ -26,12 +31,7 @@ import {
   Report,
   Review,
 } from "../types/report";
-import { Order } from "../types/order";
-import { Pest } from "../types/pest";
-import { Product } from "../types/product";
 import { Service } from "../types/service";
-import { ApplicationMethod } from "../types/application-method";
-import { Lot } from "../types/lot";
 
 interface AnswerState {
   questionId: number;
@@ -60,25 +60,14 @@ const caution_color = "#fd7e14";
 export default function DeviceDetailsScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const {
-    deviceData,
-    productsData,
-    pestsData,
-    orderId,
-    deviceId,
-    serviceId,
-    serviceName,
-    isLocked,
-  } = useLocalSearchParams<{
-    deviceData: string;
-    productsData: string;
-    pestsData: string;
-    orderId: string;
-    deviceId: string;
-    serviceId: string;
-    serviceName: string;
-    isLocked: string;
-  }>();
+  const { orderId, deviceId, serviceId, serviceName, isLocked } =
+    useLocalSearchParams<{
+      orderId: string;
+      deviceId: string;
+      serviceId: string;
+      serviceName: string;
+      isLocked: string;
+    }>();
 
   const [device, setDevice] = useState<Device | null>(null);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
@@ -155,63 +144,57 @@ export default function DeviceDetailsScreen() {
   };
 
   useEffect(() => {
-    const resetDeviceState = () => {
-      setAnswers([]);
-      setProducts([]);
-      setPests([]);
-      setObservations("");
-      setSelectedProduct({
-        product: null,
-        selectedLot: null,
-        selectedMethod: null,
-        amount: "",
-      });
-      setNewPest({
-        pestId: "",
-        count: "",
-      });
+    const loadDeviceData = async () => {
+      if (!orderId || !serviceId || !deviceId) return;
+
+      try {
+        // Cargar la orden y encontrar el servicio y dispositivo específicos
+        const orders: Order[] = (await loadFromJsonFile("orders")) || [];
+        const order = orders.find((o) => o.id === Number(orderId));
+        if (!order) throw new Error("Order not found");
+
+        const service = order.services.find((s) => s.id === Number(serviceId));
+        if (!service) throw new Error("Service not found");
+
+        const deviceFromService = service.devices.find(
+          (d) => d.id === Number(deviceId)
+        );
+        if (!deviceFromService) throw new Error("Device not found");
+
+        setDevice(deviceFromService);
+        setAvailableProducts(service.products || []);
+        setAvailablePests(service.pests || []);
+
+        // Resetear estados al cargar un nuevo dispositivo
+        setAnswers(
+          deviceFromService.questions?.map((question: Question) => ({
+            questionId: question.id,
+            response: "", // Inicializa respuestas vacías
+          })) || []
+        );
+        setProducts([]);
+        setPests([]);
+        setObservations("");
+        setSelectedProduct({
+          product: null,
+          selectedLot: null,
+          selectedMethod: null,
+          amount: "",
+        });
+        setNewPest({ pestId: "", count: "" });
+      } catch (error) {
+        console.error("Error loading device data from storage:", error);
+        Alert.alert(
+          "Error",
+          "No se pudo cargar la información del dispositivo."
+        );
+        // Opcional: navegar hacia atrás si los datos no se pueden cargar
+        if (router.canGoBack()) router.back();
+      }
     };
 
-    resetDeviceState();
-  }, [deviceData, orderId, deviceId]);
-
-  useEffect(() => {
-    if (deviceData) {
-      try {
-        const parsedDevice = JSON.parse(deviceData);
-        setDevice(parsedDevice);
-
-        const initialAnswers =
-          parsedDevice.questions?.map((question: Question) => ({
-            questionId: question.id,
-            response: "",
-          })) || [];
-        setAnswers(initialAnswers);
-      } catch (error) {
-        console.error("Error parsing device data:", error);
-      }
-    }
-
-    if (productsData) {
-      try {
-        const parsedProducts = JSON.parse(productsData);
-        setAvailableProducts(parsedProducts);
-      } catch (error) {
-        console.error("Error parsing products data:", error);
-        setAvailablePests([]);
-      }
-    }
-
-    if (pestsData) {
-      try {
-        const parsedPests = JSON.parse(pestsData);
-        setAvailablePests(parsedPests);
-      } catch (error) {
-        console.error("Error parsing pests data:", error);
-        setAvailablePests([]);
-      }
-    }
-  }, [deviceData, productsData, pestsData]);
+    loadDeviceData();
+  }, [orderId, serviceId, deviceId]); // Dependencias clave para recargar datos
 
   useEffect(() => {
     const loadReport = async () => {
@@ -552,10 +535,7 @@ export default function DeviceDetailsScreen() {
 
       if (success) {
         Alert.alert("Éxito", "Toda la información ha sido guardada");
-        router.push({
-          pathname: "/service-details",
-          params: { orderId, serviceId, serviceName },
-        });
+        if (router.canGoBack()) router.back();
       } else {
         Alert.alert("Error", "No se pudo guardar el reporte");
       }
@@ -1119,6 +1099,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
     padding: 20,
     paddingTop: 50,
     backgroundColor: "#ffffff",
@@ -1379,7 +1361,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 8,
   },
-  
+
   addButtonDisabled: {
     backgroundColor: "#9CA3AF",
   },
